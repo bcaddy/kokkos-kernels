@@ -249,7 +249,7 @@ void test_BDF_Logistic() {
   using mv_type         = Kokkos::View<scalar_type**, execution_space>;
   using mat_type        = Kokkos::View<scalar_type**, execution_space>;
 
-  Kokkos::RangePolicy<execution_space> myPolicy(0, 1);
+  Kokkos::RangePolicy<execution_space> my_policy(0, 1);
   Logistic mySys(1, 1);
 
   constexpr int num_tests   = 7;
@@ -278,7 +278,7 @@ void test_BDF_Logistic() {
 
     BDFSolve_wrapper<Logistic, KokkosODE::Experimental::BDF_type::BDF1, vec_type, mv_type, mat_type, scalar_type>
         solve_wrapper(mySys, t_start, t_end, num_steps[idx], y0, y_new, rhs, update, scale, y_vecs, kstack, temp, jac);
-    Kokkos::parallel_for(myPolicy, solve_wrapper);
+    Kokkos::parallel_for(my_policy, solve_wrapper);
     Kokkos::fence();
 
     auto y_new_h = Kokkos::create_mirror_view(y_new);
@@ -303,7 +303,7 @@ void test_BDF_Logistic() {
 
     BDFSolve_wrapper<Logistic, KokkosODE::Experimental::BDF_type::BDF2, vec_type, mv_type, mat_type, scalar_type>
         solve_wrapper(mySys, t_start, t_end, num_steps[idx], y0, y_new, rhs, update, scale, y_vecs, kstack, temp, jac);
-    Kokkos::parallel_for(myPolicy, solve_wrapper);
+    Kokkos::parallel_for(my_policy, solve_wrapper);
     Kokkos::fence();
 
     auto y_new_h = Kokkos::create_mirror_view(y_new);
@@ -328,7 +328,7 @@ void test_BDF_Logistic() {
 
     BDFSolve_wrapper<Logistic, KokkosODE::Experimental::BDF_type::BDF3, vec_type, mv_type, mat_type, scalar_type>
         solve_wrapper(mySys, t_start, t_end, num_steps[idx], y0, y_new, rhs, update, scale, y_vecs, kstack, temp, jac);
-    Kokkos::parallel_for(myPolicy, solve_wrapper);
+    Kokkos::parallel_for(my_policy, solve_wrapper);
     Kokkos::fence();
 
     auto y_new_h = Kokkos::create_mirror_view(y_new);
@@ -353,7 +353,7 @@ void test_BDF_Logistic() {
 
     BDFSolve_wrapper<Logistic, KokkosODE::Experimental::BDF_type::BDF4, vec_type, mv_type, mat_type, scalar_type>
         solve_wrapper(mySys, t_start, t_end, num_steps[idx], y0, y_new, rhs, update, scale, y_vecs, kstack, temp, jac);
-    Kokkos::parallel_for(myPolicy, solve_wrapper);
+    Kokkos::parallel_for(my_policy, solve_wrapper);
     Kokkos::fence();
 
     auto y_new_h = Kokkos::create_mirror_view(y_new);
@@ -377,7 +377,7 @@ void test_BDF_Logistic() {
 
     BDFSolve_wrapper<Logistic, KokkosODE::Experimental::BDF_type::BDF5, vec_type, mv_type, mat_type, scalar_type>
         solve_wrapper(mySys, t_start, t_end, num_steps[idx], y0, y_new, rhs, update, scale, y_vecs, kstack, temp, jac);
-    Kokkos::parallel_for(myPolicy, solve_wrapper);
+    Kokkos::parallel_for(my_policy, solve_wrapper);
     Kokkos::fence();
 
     auto y_new_h = Kokkos::create_mirror_view(y_new);
@@ -417,10 +417,10 @@ void test_BDF_LotkaVolterra() {
   Kokkos::deep_copy(y0, 10.0);
   Kokkos::deep_copy(y_vecs, 10.0);
 
-  Kokkos::RangePolicy<execution_space> myPolicy(0, 1);
+  Kokkos::RangePolicy<execution_space> my_policy(0, 1);
   BDFSolve_wrapper<LotkaVolterra, KokkosODE::Experimental::BDF_type::BDF5, vec_type, mv_type, mat_type, scalar_type>
       solve_wrapper(mySys, t_start, t_end, 1000, y0, y_new, rhs, update, scale, y_vecs, kstack, temp, jac);
-  Kokkos::parallel_for(myPolicy, solve_wrapper);
+  Kokkos::parallel_for(my_policy, solve_wrapper);
 }
 
 template <class device_type, class scalar_type>
@@ -451,10 +451,10 @@ void test_BDF_StiffChemistry() {
   Kokkos::deep_copy(y0, y0_h);
   Kokkos::deep_copy(y_vecs, 0.0);
 
-  Kokkos::RangePolicy<execution_space> myPolicy(0, 1);
+  Kokkos::RangePolicy<execution_space> my_policy(0, 1);
   BDFSolve_wrapper<StiffChemistry, KokkosODE::Experimental::BDF_type::BDF5, vec_type, mv_type, mat_type, scalar_type>
       solve_wrapper(mySys, t_start, t_end, 110000, y0, y_new, rhs, update, scale, y_vecs, kstack, temp, jac);
-  Kokkos::parallel_for(myPolicy, solve_wrapper);
+  Kokkos::parallel_for(my_policy, solve_wrapper);
 }
 
 // Integrate the SparseLinearSystem, whose iteration matrix I - dt*J is
@@ -484,7 +484,7 @@ void test_BDF_SparseLinearSystem() {
   Kokkos::deep_copy(y0_h, 1.0);
   mySys.solution(t_end, y0_h, y_ref_h);
 
-  Kokkos::RangePolicy<execution_space> myPolicy(0, 1);
+  Kokkos::RangePolicy<execution_space> my_policy(0, 1);
 
   // Fixed order, fixed step BDF1 with dt = 0.1, large enough
   // for the static pivoting to fail.
@@ -502,7 +502,7 @@ void test_BDF_SparseLinearSystem() {
     BDFSolve_wrapper<SparseLinearSystem, KokkosODE::Experimental::BDF_type::BDF1, vec_type, mv_type, mat_type,
                      scalar_type>
         solve_wrapper(mySys, t_start, t_end, num_steps, y0, y_new, rhs, update, scale, y_vecs, kstack, temp, jac);
-    Kokkos::parallel_for(myPolicy, solve_wrapper);
+    Kokkos::parallel_for(my_policy, solve_wrapper);
     Kokkos::fence();
 
     Kokkos::deep_copy(y_new_h, y_new);
@@ -522,7 +522,7 @@ void test_BDF_SparseLinearSystem() {
 
     BDF_Solve_wrapper bdf_wrapper(mySys, t_start, t_end, scalar_type(0.0), (t_end - t_start) / 10, y0, y_new, temp,
                                   temp2);
-    Kokkos::parallel_for(myPolicy, bdf_wrapper);
+    Kokkos::parallel_for(my_policy, bdf_wrapper);
     Kokkos::fence();
 
     Kokkos::deep_copy(y_new_h, y_new);
@@ -628,13 +628,13 @@ void test_BDF_SparseLinearSystem() {
 //   Kokkos::deep_copy(y0, 10.0);
 //   Kokkos::deep_copy(y_vecs, 10.0);
 
-//   Kokkos::RangePolicy<execution_space> myPolicy(0, num_solves);
+//   Kokkos::RangePolicy<execution_space> my_policy(0, num_solves);
 //   BDFSolve_parallel<LotkaVolterra, KokkosODE::Experimental::BDF_type::BDF5,
 //                     vec_type, mv_type, mat_type, scalar_type>
 //       solve_wrapper(mySys, t_start, t_end, 1000, y0, y_new, rhs, update,
 //       scale, y_vecs,
 //                     kstack, temp, jac);
-//   Kokkos::parallel_for(myPolicy, solve_wrapper);
+//   Kokkos::parallel_for(my_policy, solve_wrapper);
 
 //   Kokkos::fence();
 // }
