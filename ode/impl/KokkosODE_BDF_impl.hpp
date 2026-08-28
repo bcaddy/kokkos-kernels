@@ -108,32 +108,36 @@ struct BDF_system_wrapper {
   }
 };
 
-template <class system_type, class subview_type, class d_vec_type>
+template <class system_type, class subview_type, class y_vec_type>
 struct BDF_system_wrapper2 {
   const system_type mySys;
   const int neqs;
   const subview_type psi;
-  const d_vec_type d;
+  const y_vec_type y_predict;
 
   bool compute_jac = true;
   double t, dt, c = 0;
 
   KOKKOS_FUNCTION
-  BDF_system_wrapper2(const system_type& mySys_, const subview_type& psi_, const d_vec_type& d_, const double t_,
-                      const double dt_)
-      : mySys(mySys_), neqs(mySys_.neqs), psi(psi_), d(d_), t(t_), dt(dt_) {}
+  BDF_system_wrapper2(const system_type& mySys_, const subview_type& psi_, const y_vec_type& y_predict_,
+                      const double t_, const double dt_)
+      : mySys(mySys_), neqs(mySys_.neqs), psi(psi_), y_predict(y_predict_), t(t_), dt(dt_) {}
 
   template <class YVectorType, class FVectorType>
   KOKKOS_FUNCTION void residual(const YVectorType& y, const FVectorType& f) const {
     // f = f(t+dt, y)
     mySys.evaluate_function(t, dt, y, f);
 
-    // std::cout << "f = psi + d - c * f = " << psi(0) << " + " << d(0) << " - "
-    // << c << " * " << f(0) << std::endl;
-
-    // rhs = higher order terms + y_{n+1}^i - y_n - dt*f
+    // Corrector equation of the NDF step
+    //   0 = psi + (y - y_predict) - c * f(t+dt, y)
+    // The correction d = y - y_predict must be the full distance between
+    // the Newton iterate and the predictor, so it is recomputed from y
+    // on every evaluation. It cannot be read from the Newton solver's
+    // update vector: that only holds the last Newton step, not the
+    // accumulated correction, which would change the root of the
+    // residual to 0 = psi - c * f(t+dt, y).
     for (int eqIdx = 0; eqIdx < neqs; ++eqIdx) {
-      f(eqIdx) = psi(eqIdx) + d(eqIdx) - c * f(eqIdx);
+      f(eqIdx) = psi(eqIdx) + (y(eqIdx) - y_predict(eqIdx)) - c * f(eqIdx);
     }
   }
 
@@ -168,7 +172,9 @@ KOKKOS_FUNCTION void BDFStep(ode_type& ode, const table_type& table, scalar_type
   }
 
   // solver the nonlinear problem
-  { KokkosODE::Experimental::Newton::Solve(sys, param, jac, temp, y_new, rhs, update, scale); }
+  {
+    KokkosODE::Experimental::Newton::Solve(sys, param, jac, temp, y_new, rhs, update, scale);
+  }
 
 }  // BDFStep
 
@@ -314,7 +320,7 @@ KOKKOS_FUNCTION void BDFStep(ode_type& ode, scalar_type& t, scalar_type& dt, sca
   gamma(4)    = 2.08333333;
   gamma(5)    = 2.28333333;
 
-  BDF_system_wrapper2 sys(ode, psi, update, t, dt);
+  BDF_system_wrapper2 sys(ode, psi, y_predict, t, dt);
   const newton_params param(
       max_newton_iters, atol,
       Kokkos::max(10 * Kokkos::ArithTraits<scalar_type>::eps() / rtol, Kokkos::min(0.03, Kokkos::sqrt(rtol))));
