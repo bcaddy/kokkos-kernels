@@ -336,9 +336,11 @@ KOKKOS_FUNCTION KokkosODE::Experimental::ode_solver_status BDFStep(
   BDF_system_wrapper2 sys(ode, psi, y_predict, t, dt);
   // Non-const: NewtonSolve records the iteration count of each solve in
   // param.iters, which feeds the safety factor of the error controller.
-  newton_params param(
-      max_newton_iters, atol,
-      Kokkos::max(10 * Kokkos::ArithTraits<scalar_type>::eps() / rtol, Kokkos::min(0.03, Kokkos::sqrt(rtol))));
+  // Pass the raw rtol: NewtonSolve derives its scaled-update tolerance
+  // max(10*eps/rtol, min(0.03, sqrt(rtol))) internally, so applying the
+  // same transform here would inflate the tolerance whenever rtol is
+  // tight enough that sqrt(rtol) falls below the 0.03 cap.
+  newton_params param(max_newton_iters, atol, rtol);
 
   // Smallest step that can still advance t in floating point
   // arithmetic (same floor as SciPy's BDF): once dt shrinks below
