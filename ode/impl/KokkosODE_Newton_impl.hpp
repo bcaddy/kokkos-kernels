@@ -115,7 +115,16 @@ KOKKOS_FUNCTION KokkosODE::Experimental::newton_solver_status NewtonSolve(
     norm_new = Kokkos::sqrt(norm_new / sys.neqs);
     if ((it > 0) && norm_old > Kokkos::ArithTraits<norm_type>::zero()) {
       rate = norm_new / norm_old;
-      if ((rate >= 1) || Kokkos::pow(rate, params.max_iters - it) / (1 - rate) * norm_new > tol) {
+      // Only treat a growing update (rate >= 1) or a predicted miss of
+      // tol as divergence while the update is still above tol. Once the
+      // update reaches the roundoff floor of the scaled system (e.g. a
+      // solve started at the solution), successive updates are noise and
+      // their ratio is meaningless: without this guard a system sitting
+      // at equilibrium is rejected as divergent about half the time.
+      // LSODE and CVODE guard their tests the same way by weighting the
+      // update norm with min(1, rate).
+      if ((norm_new >= tol) &&
+          ((rate >= 1) || Kokkos::pow(rate, params.max_iters - it) / (1 - rate) * norm_new > tol)) {
         return newton_solver_status::NLS_DIVERGENCE;
       }
     }
