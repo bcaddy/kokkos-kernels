@@ -36,7 +36,12 @@ struct Newton {
                                                     const mat_type& J, const mat_type& tmp, const ini_vec_type& y0,
                                                     const rhs_vec_type& rhs, const update_type& update,
                                                     const scale_type& scale) {
-    return KokkosODE::Impl::NewtonSolve(sys, params, J, tmp, y0, rhs, update, scale);
+    // NewtonSolve records the iteration count it took in params.iters,
+    // which this const interface cannot expose: it runs on a local copy.
+    // Call KokkosODE::Impl::NewtonSolve with a non-const Newton_params
+    // to retrieve the count.
+    Newton_params params_out = params;
+    return KokkosODE::Impl::NewtonSolve(sys, params_out, J, tmp, y0, rhs, update, scale);
   }
 };
 

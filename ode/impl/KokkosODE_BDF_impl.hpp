@@ -330,7 +330,9 @@ KOKKOS_FUNCTION KokkosODE::Experimental::ode_solver_status BDFStep(
   gamma(5)    = 2.28333333;
 
   BDF_system_wrapper2 sys(ode, psi, y_predict, t, dt);
-  const newton_params param(
+  // Non-const: NewtonSolve records the iteration count of each solve in
+  // param.iters, which feeds the safety factor of the error controller.
+  newton_params param(
       max_newton_iters, atol,
       Kokkos::max(10 * Kokkos::ArithTraits<scalar_type>::eps() / rtol, Kokkos::min(0.03, Kokkos::sqrt(rtol))));
 
@@ -394,7 +396,7 @@ KOKKOS_FUNCTION KokkosODE::Experimental::ode_solver_status BDFStep(
     Kokkos::Experimental::local_deep_copy(y_new, y_predict);
     Kokkos::Experimental::local_deep_copy(update, 0);
     KokkosODE::Experimental::newton_solver_status newton_status =
-        KokkosODE::Experimental::Newton::Solve(sys, param, jac, tmp_gesv, y_new, rhs, update, scale);
+        KokkosODE::Impl::NewtonSolve(sys, param, jac, tmp_gesv, y_new, rhs, update, scale);
 
     for (int eqIdx = 0; eqIdx < sys.neqs; ++eqIdx) {
       update(eqIdx) = y_new(eqIdx) - y_predict(eqIdx);

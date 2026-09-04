@@ -63,7 +63,10 @@ enum newton_solver_status : int {
 };
 
 struct Newton_params {
-  int max_iters, iters = 0;
+  int max_iters;
+  /// Set by Impl::NewtonSolve: number of iterations taken by the most
+  /// recent solve (regardless of how the solve ended).
+  int iters = 0;
   double abs_tol, rel_tol;
 
   // Constructor that sets basic solver parameters
