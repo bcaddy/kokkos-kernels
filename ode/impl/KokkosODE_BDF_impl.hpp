@@ -84,8 +84,10 @@ struct BDF_system_wrapper {
 
   template <class vec_type>
   KOKKOS_FUNCTION void residual(const vec_type& y, const vec_type& f) const {
-    // f = f(t+dt, y)
-    mySys.evaluate_function(t, dt, y, f);
+    // The implicit BDF stage is evaluated at the end of the step,
+    // f = f(t+dt, y), and the first argument of evaluate_function is
+    // the evaluation time (same convention as the Runge-Kutta solvers).
+    mySys.evaluate_function(t + dt, dt, y, f);
 
     for (int eqIdx = 0; eqIdx < neqs; ++eqIdx) {
       f(eqIdx) = y(eqIdx) - table.coefficients[order] * dt * f(eqIdx);
@@ -97,7 +99,7 @@ struct BDF_system_wrapper {
 
   template <class vec_type, class mat_type>
   KOKKOS_FUNCTION void jacobian(const vec_type& y, const mat_type& jac) const {
-    mySys.evaluate_jacobian(t, dt, y, jac);
+    mySys.evaluate_jacobian(t + dt, dt, y, jac);
 
     for (int rowIdx = 0; rowIdx < neqs; ++rowIdx) {
       for (int colIdx = 0; colIdx < neqs; ++colIdx) {
@@ -125,8 +127,12 @@ struct BDF_system_wrapper2 {
 
   template <class YVectorType, class FVectorType>
   KOKKOS_FUNCTION void residual(const YVectorType& y, const FVectorType& f) const {
-    // f = f(t+dt, y)
-    mySys.evaluate_function(t, dt, y, f);
+    // The implicit stage is evaluated at the end of the step,
+    // f = f(t+dt, y), and the first argument of evaluate_function is
+    // the evaluation time (same convention as the Runge-Kutta solvers).
+    // The driver keeps dt (and c) in sync when it halves or clamps the
+    // step inside its retry loop.
+    mySys.evaluate_function(t + dt, dt, y, f);
 
     // Corrector equation of the NDF step
     //   0 = psi + (y - y_predict) - c * f(t+dt, y)
@@ -144,7 +150,7 @@ struct BDF_system_wrapper2 {
   template <class vec_type, class mat_type>
   KOKKOS_FUNCTION void jacobian(const vec_type& y, const mat_type& jac) const {
     if (compute_jac) {
-      mySys.evaluate_jacobian(t, dt, y, jac);
+      mySys.evaluate_jacobian(t + dt, dt, y, jac);
 
       // Jacobian of the corrector residual psi + (y - y_predict) - c*f:
       //   J = I - c*(df/dy),  with c = dt/alpha[order].
@@ -379,6 +385,9 @@ KOKKOS_FUNCTION KokkosODE::Experimental::ode_solver_status BDFStep(
     KokkosBlas::Experimental::serial_gemv('N', 1.0 / alpha[order], subD, subGamma, 0.0, psi);
 
     sys.compute_jac = true;
+    // dt may have been halved or clamped since the last attempt: refresh
+    // the wrapper so the residual and Jacobian see the current step.
+    sys.dt          = dt;
     sys.c           = dt / alpha[order];
     sys.jacobian(y_new, jac);
     sys.compute_jac = true;
